@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Child {
+  id        Int       @id @default(autoincrement())
+  name      String
+  birthdate DateTime?
+  createdAt DateTime  @default(now())
+
+  academies Academy[]
+}
+
+model Academy {
+  id        Int      @id @default(autoincrement())
+  childId   Int
+  name      String
+  category  String?
+  phone     String?
+  address   String?
+  memo      String?
+  createdAt DateTime @default(now())
+
+  child    Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  schedules Schedule[]
+  payments  PaymentPlan[]
+  paymentHistory PaymentHistory[]
+}
+
+model Schedule {
+  id        Int    @id @default(autoincrement())
+  academyId Int
+  dayOfWeek Int    // 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday
+  startTime String // Format: "HH:MM" e.g., "15:00"
+  endTime   String // Format: "HH:MM" e.g., "15:50"
+
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+}
+
+model PaymentPlan {
+  id         Int    @id @default(autoincrement())
+  academyId  Int
+  amount     Int    // Amount in KRW
+  paymentDay Int    // Day of month (1-31) or day of week (1-7) depending on cycle
+  cycle      String // "MONTH" or "WEEK"
+
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+}
+
+model PaymentHistory {
+  id        Int      @id @default(autoincrement())
+  academyId Int
+  amount    Int      // Amount in KRW
+  paidDate  DateTime
+  status    String   // "PAID" or "PENDING"
+
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+}
