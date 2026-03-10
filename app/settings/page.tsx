@@ -211,39 +211,43 @@ export default function SettingsPage() {
                     <p className="text-green-400 font-semibold mb-2">✅ {dbTestResult.message}</p>
                   </div>
 
-                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-gray-400">데이터베이스 정보</p>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-white">
-                        <span className="text-gray-400">Provider:</span> {dbTestResult.data.provider}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">Status:</span> {dbTestResult.data.status}
-                      </p>
-                    </div>
-                  </div>
+                  {dbTestResult.data && (
+                    <>
+                      <div className="bg-gray-700 rounded-lg p-4 space-y-2">
+                        <p className="text-sm text-gray-400">데이터베이스 정보</p>
+                        <div className="space-y-1 text-sm">
+                          <p className="text-white">
+                            <span className="text-gray-400">Provider:</span> {dbTestResult.data.provider}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-400">Status:</span> {dbTestResult.data.status}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-gray-400">데이터 개수</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p className="text-white">
-                        <span className="text-gray-400">아이:</span> {dbTestResult.data.counts.children}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">학원:</span> {dbTestResult.data.counts.academies}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">스케줄:</span> {dbTestResult.data.counts.schedules}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">납부:</span> {dbTestResult.data.counts.paymentPlans}
-                      </p>
-                    </div>
-                  </div>
+                      <div className="bg-gray-700 rounded-lg p-4 space-y-2">
+                        <p className="text-sm text-gray-400">데이터 개수</p>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <p className="text-white">
+                            <span className="text-gray-400">아이:</span> {dbTestResult.data.counts.children}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-400">학원:</span> {dbTestResult.data.counts.academies}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-400">스케줄:</span> {dbTestResult.data.counts.schedules}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-400">납부:</span> {dbTestResult.data.counts.paymentPlans}
+                          </p>
+                        </div>
+                      </div>
 
-                  <p className="text-xs text-gray-400">
-                    {new Date(dbTestResult.data.timestamp).toLocaleString('ko-KR')}
-                  </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(dbTestResult.data.timestamp).toLocaleString('ko-KR')}
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -251,20 +255,22 @@ export default function SettingsPage() {
                     <p className="text-red-400 font-semibold mb-2">❌ {dbTestResult.message}</p>
                   </div>
 
-                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-gray-400">오류 정보</p>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-white">
-                        <span className="text-gray-400">Name:</span> {dbTestResult.error.name}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">Code:</span> {dbTestResult.error.code}
-                      </p>
-                      <p className="text-white break-words">
-                        <span className="text-gray-400">Message:</span> {dbTestResult.error.message}
-                      </p>
+                  {dbTestResult.error && (
+                    <div className="bg-gray-700 rounded-lg p-4 space-y-2">
+                      <p className="text-sm text-gray-400">오류 정보</p>
+                      <div className="space-y-1 text-sm">
+                        <p className="text-white">
+                          <span className="text-gray-400">Name:</span> {dbTestResult.error.name}
+                        </p>
+                        <p className="text-white">
+                          <span className="text-gray-400">Code:</span> {dbTestResult.error.code}
+                        </p>
+                        <p className="text-white break-words">
+                          <span className="text-gray-400">Message:</span> {dbTestResult.error.message}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
