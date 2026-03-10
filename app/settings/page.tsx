@@ -6,8 +6,22 @@ import Layout from '@/components/Layout';
 interface DbTestResult {
   success: boolean;
   message: string;
-  data?: any;
-  error?: any;
+  data?: {
+    status: string;
+    provider: string;
+    counts: {
+      children: number;
+      academies: number;
+      schedules: number;
+      paymentPlans: number;
+    };
+    timestamp: string;
+  };
+  error?: {
+    name: string;
+    message: string;
+    code: string;
+  };
 }
 
 export default function SettingsPage() {
@@ -25,11 +39,15 @@ export default function SettingsPage() {
       const data = await res.json();
       setDbTestResult(data);
       setShowDbModal(true);
-    } catch (error: any) {
+    } catch (error) {
       setDbTestResult({
         success: false,
         message: '네트워크 오류',
-        error: { message: error.message },
+        error: {
+          name: 'NetworkError',
+          message: error instanceof Error ? error.message : '알 수 없는 오류',
+          code: 'N/A'
+        },
       });
       setShowDbModal(true);
     } finally {
@@ -106,7 +124,7 @@ export default function SettingsPage() {
                 <p className="font-semibold text-white mb-2">1. Supabase 프로젝트 생성</p>
                 <p className="text-xs text-gray-400">
                   • https://supabase.com/dashboard 접속<br />
-                  • "New Project" 클릭<br />
+                  • &quot;New Project&quot; 클릭<br />
                   • 프로젝트 이름 및 비밀번호 설정
                 </p>
               </div>

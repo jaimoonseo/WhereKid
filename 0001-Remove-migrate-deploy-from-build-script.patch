@@ -1,0 +1,28 @@
+From c20b1e20f1f8ef48b30f6b402140cab9ea8b6df6 Mon Sep 17 00:00:00 2001
+From: jaimoonseo <jaimoonseo@users.noreply.github.com>
+Date: Tue, 10 Mar 2026 14:48:06 +0900
+Subject: [PATCH 1/2] Remove migrate deploy from build script
+
+- Remove prisma migrate deploy from build to avoid env var issues
+- Database setup should be done manually via Supabase SQL Editor
+- Allows Vercel build to complete successfully
+---
+ package.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package.json b/package.json
+index 5b0561f..c6d93db 100644
+--- a/package.json
++++ b/package.json
+@@ -4,7 +4,7 @@
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+-    "build": "prisma generate && prisma migrate deploy && next build",
++    "build": "prisma generate && next build",
+     "start": "next start",
+     "lint": "next lint",
+     "postinstall": "prisma generate"
+-- 
+2.39.5
+
