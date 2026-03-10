@@ -4,6 +4,20 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import AcademyCard from '@/components/academy/AcademyCard';
 
+interface Schedule {
+  id: number;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+interface PaymentPlan {
+  id: number;
+  amount: number;
+  paymentDay: number;
+  cycle: string;
+}
+
 interface Academy {
   id: number;
   name: string;
@@ -11,8 +25,8 @@ interface Academy {
   phone?: string;
   address?: string;
   memo?: string;
-  schedules?: any[];
-  payments?: any[];
+  schedules?: Schedule[];
+  payments?: PaymentPlan[];
 }
 
 export default function AcademyPage() {
