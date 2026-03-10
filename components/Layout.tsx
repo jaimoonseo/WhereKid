@@ -15,6 +15,7 @@ export default function Layout({ children }: LayoutProps) {
     { href: '/academy', label: '학원', icon: '🏫' },
     { href: '/schedule', label: '스케줄', icon: '📅' },
     { href: '/payments', label: '납부', icon: '💰' },
+    { href: '/settings', label: '설정', icon: '⚙️' },
   ];
 
   return (

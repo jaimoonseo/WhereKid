@@ -35,9 +35,6 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [isWeekend, setIsWeekend] = useState(false);
-  const [showDbModal, setShowDbModal] = useState(false);
-  const [dbTestResult, setDbTestResult] = useState<any>(null);
-  const [testingDb, setTestingDb] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -56,26 +53,6 @@ export default function Home() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const testDbConnection = async () => {
-    setTestingDb(true);
-    setDbTestResult(null);
-    try {
-      const res = await fetch('/api/test-db');
-      const data = await res.json();
-      setDbTestResult(data);
-      setShowDbModal(true);
-    } catch (error: any) {
-      setDbTestResult({
-        success: false,
-        message: '네트워크 오류',
-        error: { message: error.message },
-      });
-      setShowDbModal(true);
-    } finally {
-      setTestingDb(false);
     }
   };
 
@@ -102,13 +79,6 @@ export default function Home() {
         <div className="text-center">
           <p className="text-sm text-gray-400">현재 시간</p>
           <p className="text-3xl font-bold text-white">{currentTime || '--:--'}</p>
-          <button
-            onClick={testDbConnection}
-            disabled={testingDb}
-            className="mt-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-          >
-            {testingDb ? '테스트 중...' : '🔌 DB 연결 테스트'}
-          </button>
         </div>
 
         {isWeekend ? (
@@ -175,92 +145,6 @@ export default function Home() {
                   daysUntil={p.daysUntil}
                 />
               ))}
-            </div>
-          </div>
-        )}
-
-        {showDbModal && dbTestResult && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">DB 연결 테스트</h3>
-                <button
-                  onClick={() => setShowDbModal(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {dbTestResult.success ? (
-                <div className="space-y-4">
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                    <p className="text-green-400 font-semibold mb-2">✅ {dbTestResult.message}</p>
-                  </div>
-
-                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-gray-400">데이터베이스 정보</p>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-white">
-                        <span className="text-gray-400">Provider:</span> {dbTestResult.data.provider}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">Status:</span> {dbTestResult.data.status}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-gray-400">데이터 개수</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p className="text-white">
-                        <span className="text-gray-400">아이:</span> {dbTestResult.data.counts.children}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">학원:</span> {dbTestResult.data.counts.academies}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">스케줄:</span> {dbTestResult.data.counts.schedules}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">납부:</span> {dbTestResult.data.counts.paymentPlans}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-400">
-                    {new Date(dbTestResult.data.timestamp).toLocaleString('ko-KR')}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                    <p className="text-red-400 font-semibold mb-2">❌ {dbTestResult.message}</p>
-                  </div>
-
-                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-gray-400">오류 정보</p>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-white">
-                        <span className="text-gray-400">Name:</span> {dbTestResult.error.name}
-                      </p>
-                      <p className="text-white">
-                        <span className="text-gray-400">Code:</span> {dbTestResult.error.code}
-                      </p>
-                      <p className="text-white break-words">
-                        <span className="text-gray-400">Message:</span> {dbTestResult.error.message}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => setShowDbModal(false)}
-                className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
-              >
-                닫기
-              </button>
             </div>
           </div>
         )}
