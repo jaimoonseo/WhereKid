@@ -42,10 +42,12 @@ export function getShortDayName(day: number): string {
 }
 
 /**
- * Get current day of week (1-5 for Mon-Fri, 0 for Sat/Sun)
+ * Get current day of week (1-5 for Mon-Fri, 0 for Sat/Sun) in Korea timezone
  */
 export function getCurrentDayOfWeek(): number {
-  const day = new Date().getDay();
+  const now = new Date();
+  const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  const day = koreaTime.getDay();
   // Sunday = 0, Saturday = 6
   if (day === 0 || day === 6) return 0;
   // Monday = 1, Tuesday = 2, etc.
@@ -53,12 +55,13 @@ export function getCurrentDayOfWeek(): number {
 }
 
 /**
- * Get current time in "HH:MM" format
+ * Get current time in "HH:MM" format in Korea timezone
  */
 export function getCurrentTime(): string {
   const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  const hours = koreaTime.getHours().toString().padStart(2, '0');
+  const minutes = koreaTime.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }
 
