@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import {
+  getNotificationPermissionStatus,
+  requestNotificationPermission,
+  registerServiceWorker,
+} from '@/lib/notification';
 
 interface DbTestResult {
   success: boolean;
@@ -30,6 +35,24 @@ export default function SettingsPage() {
   const [dbTestResult, setDbTestResult] = useState<DbTestResult | null>(null);
   const [testingDb, setTestingDb] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+
+  // Notification states
+  const [notificationSupported, setNotificationSupported] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+
+  useEffect(() => {
+    // Check notification support
+    const status = getNotificationPermissionStatus();
+    setNotificationSupported(status.supported);
+    setNotificationPermission(status.permission);
+    setNotificationEnabled(status.permission === 'granted');
+
+    // Register service worker if supported
+    if (status.supported) {
+      registerServiceWorker();
+    }
+  }, []);
 
   const testConnection = async () => {
     setTestingDb(true);
@@ -64,6 +87,26 @@ export default function SettingsPage() {
     }
   };
 
+  const handleEnableNotifications = async () => {
+    try {
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+      setNotificationEnabled(permission === 'granted');
+
+      if (permission === 'granted') {
+        // Save preference to localStorage
+        localStorage.setItem('notifications_enabled', 'true');
+      }
+    } catch (error) {
+      console.error('Failed to request notification permission:', error);
+    }
+  };
+
+  const handleDisableNotifications = () => {
+    localStorage.setItem('notifications_enabled', 'false');
+    setNotificationEnabled(false);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -72,9 +115,90 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-400">데이터베이스 연결 설정을 관리합니다</p>
         </div>
 
+        {/* 알림 설정 */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">🔔 스케줄 알림</h3>
+
+          {!notificationSupported ? (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+              <p className="text-red-400 text-sm">
+                ❌ 이 브라우저는 알림을 지원하지 않습니다.
+              </p>
+              <p className="text-gray-400 text-xs mt-2">
+                Safari 또는 Chrome을 사용하세요.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-white font-medium">스케줄 10분 전 알림</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {notificationPermission === 'granted'
+                      ? notificationEnabled
+                        ? '✅ 알림이 활성화되었습니다'
+                        : '⏸️ 알림이 일시 중지되었습니다'
+                      : notificationPermission === 'denied'
+                      ? '❌ 알림 권한이 거부되었습니다'
+                      : '⚠️ 알림 권한을 허용해주세요'}
+                  </p>
+                </div>
+
+                {notificationPermission === 'granted' ? (
+                  <button
+                    onClick={notificationEnabled ? handleDisableNotifications : () => setNotificationEnabled(true)}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                      notificationEnabled
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    {notificationEnabled ? '중지' : '활성화'}
+                  </button>
+                ) : notificationPermission === 'denied' ? (
+                  <div className="text-sm text-gray-400 text-right">
+                    <p>브라우저 설정에서</p>
+                    <p>권한을 변경하세요</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleEnableNotifications}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    권한 요청
+                  </button>
+                )}
+              </div>
+
+              {notificationPermission === 'granted' && notificationEnabled && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-blue-400 text-sm font-medium mb-2">💡 알림 작동 방식</p>
+                  <ul className="text-xs text-gray-300 space-y-1">
+                    <li>• 오늘 스케줄 10분 전에 자동 알림</li>
+                    <li>• 백그라운드에서도 작동</li>
+                    <li>• 홈 화면에 추가하면 더 좋습니다</li>
+                  </ul>
+                </div>
+              )}
+
+              {notificationPermission === 'default' && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                  <p className="text-yellow-400 text-sm font-medium mb-2">📱 아이폰 사용자</p>
+                  <ol className="text-xs text-gray-300 space-y-1 list-decimal list-inside">
+                    <li>Safari에서 이 페이지 열기</li>
+                    <li>하단 공유 버튼 탭</li>
+                    <li>&quot;홈 화면에 추가&quot; 선택</li>
+                    <li>추가된 앱에서 알림 권한 요청</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-6">
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">데이터베이스 연결</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">💾 데이터베이스 연결</h3>
 
             <div className="space-y-4">
               <div>

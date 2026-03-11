@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Layout from '@/components/Layout';
 import ScheduleCard from '@/components/schedule/ScheduleCard';
 import PaymentCard from '@/components/payment/PaymentCard';
 import { getCurrentTime, getDayName } from '@/lib/utils';
+import {
+  scheduleLocalNotification,
+  calculateNotificationDelay,
+  cancelScheduledNotification,
+} from '@/lib/notification';
 
 interface Schedule {
   id: number;
@@ -36,6 +41,7 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [isWeekend, setIsWeekend] = useState(false);
+  const notificationTimers = useRef<number[]>([]);
 
   const fetchData = async () => {
     try {
@@ -63,6 +69,35 @@ export default function Home() {
     const interval = setInterval(() => setCurrentTime(getCurrentTime()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Schedule notifications for today's schedules
+  useEffect(() => {
+    // Clear existing timers
+    notificationTimers.current.forEach(cancelScheduledNotification);
+    notificationTimers.current = [];
+
+    // Check if notifications are enabled
+    const notificationsEnabled = localStorage.getItem('notifications_enabled') === 'true';
+    if (!notificationsEnabled || todaySchedules.length === 0) {
+      return;
+    }
+
+    // Schedule notification for each schedule
+    todaySchedules.forEach((schedule) => {
+      const delay = calculateNotificationDelay(schedule.startTime);
+      if (delay > 0) {
+        const title = '🔔 스케줄 알림';
+        const body = `10분 후 ${schedule.academy.name} 시작! (${schedule.startTime})`;
+        const timerId = scheduleLocalNotification(title, body, delay);
+        notificationTimers.current.push(timerId);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      notificationTimers.current.forEach(cancelScheduledNotification);
+    };
+  }, [todaySchedules]);
 
   if (loading) {
     return (
