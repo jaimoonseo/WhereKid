@@ -107,6 +107,25 @@ export default function SettingsPage() {
     setNotificationEnabled(false);
   };
 
+  const handleTestNotification = () => {
+    if (notificationPermission === 'granted') {
+      // 1분 후 테스트 알림 발송
+      setTimeout(() => {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.showNotification('🎉 WhereKid에 오신 것을 환영합니다!', {
+            body: '알림이 정상적으로 작동하고 있습니다. 스케줄 10분 전에 자동으로 알림을 받으실 수 있습니다.',
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: 'test-notification',
+            requireInteraction: false,
+          });
+        });
+      }, 60000); // 60초 = 1분
+
+      alert('✅ 테스트 알림이 예약되었습니다!\n1분 후에 알림을 받으실 수 있습니다.');
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -171,14 +190,23 @@ export default function SettingsPage() {
               </div>
 
               {notificationPermission === 'granted' && notificationEnabled && (
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                  <p className="text-blue-400 text-sm font-medium mb-2">💡 알림 작동 방식</p>
-                  <ul className="text-xs text-gray-300 space-y-1">
-                    <li>• 오늘 스케줄 10분 전에 자동 알림</li>
-                    <li>• 백그라운드에서도 작동</li>
-                    <li>• 홈 화면에 추가하면 더 좋습니다</li>
-                  </ul>
-                </div>
+                <>
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <p className="text-blue-400 text-sm font-medium mb-2">💡 알림 작동 방식</p>
+                    <ul className="text-xs text-gray-300 space-y-1">
+                      <li>• 오늘 스케줄 10분 전에 자동 알림</li>
+                      <li>• 백그라운드에서도 작동</li>
+                      <li>• 홈 화면에 추가하면 더 좋습니다</li>
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={handleTestNotification}
+                    className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    🧪 테스트 알림 보내기 (1분 후)
+                  </button>
+                </>
               )}
 
               {notificationPermission === 'default' && (
