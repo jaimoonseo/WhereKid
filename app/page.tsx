@@ -72,26 +72,32 @@ export default function Home() {
 
   // Schedule notifications for today's schedules
   useEffect(() => {
-    // Clear existing timers
-    notificationTimers.current.forEach(cancelScheduledNotification);
-    notificationTimers.current = [];
+    const setupNotifications = async () => {
+      // Clear existing timers
+      notificationTimers.current.forEach(cancelScheduledNotification);
+      notificationTimers.current = [];
 
-    // Check if notifications are enabled
-    const notificationsEnabled = localStorage.getItem('notifications_enabled') === 'true';
-    if (!notificationsEnabled || todaySchedules.length === 0) {
-      return;
-    }
-
-    // Schedule notification for each schedule
-    todaySchedules.forEach((schedule) => {
-      const delay = calculateNotificationDelay(schedule.startTime);
-      if (delay > 0) {
-        const title = '🔔 스케줄 알림';
-        const body = `10분 후 ${schedule.academy.name} 시작! (${schedule.startTime})`;
-        const timerId = scheduleLocalNotification(title, body, delay);
-        notificationTimers.current.push(timerId);
+      // Check if notifications are enabled
+      const notificationsEnabled = localStorage.getItem('notifications_enabled') === 'true';
+      if (!notificationsEnabled || todaySchedules.length === 0) {
+        return;
       }
-    });
+
+      // Schedule notification for each schedule
+      for (const schedule of todaySchedules) {
+        const delay = calculateNotificationDelay(schedule.startTime);
+        if (delay > 0) {
+          const title = '🔔 스케줄 알림';
+          const body = `10분 후 ${schedule.academy.name} 시작! (${schedule.startTime})`;
+          const timerId = await scheduleLocalNotification(title, body, delay);
+          if (timerId > 0) {
+            notificationTimers.current.push(timerId);
+          }
+        }
+      }
+    };
+
+    setupNotifications();
 
     // Cleanup on unmount
     return () => {

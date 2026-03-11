@@ -75,3 +75,100 @@ self.addEventListener('notificationclick', (event) => {
       })
   );
 });
+
+// Message event - 메인 앱에서 알림 스케줄 받기
+self.addEventListener('message', (event) => {
+  console.log('Message received:', event.data);
+
+  if (event.data.type === 'SCHEDULE_NOTIFICATION') {
+    const { title, body, showAt } = event.data;
+    const delay = showAt - Date.now();
+
+    if (delay > 0) {
+      // IndexedDB나 localStorage에 저장하고 주기적으로 확인
+      setTimeout(() => {
+        self.registration.showNotification(title, {
+          body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'schedule-notification',
+          requireInteraction: false,
+        });
+      }, delay);
+    }
+  }
+
+  if (event.data.type === 'CHECK_SCHEDULED_NOTIFICATIONS') {
+    // 저장된 알림 확인 및 발송
+    checkAndSendNotifications();
+  }
+});
+
+// Periodic check for scheduled notifications (매 1분마다)
+async function checkAndSendNotifications() {
+  try {
+    // IndexedDB에서 예약된 알림 가져오기
+    const db = await openNotificationDB();
+    const notifications = await getScheduledNotifications(db);
+    const now = Date.now();
+
+    for (const notification of notifications) {
+      if (notification.showAt <= now) {
+        await self.registration.showNotification(notification.title, {
+          body: notification.body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'schedule-notification',
+          requireInteraction: false,
+        });
+        // 발송한 알림은 DB에서 삭제
+        await deleteNotification(db, notification.id);
+      }
+    }
+  } catch (error) {
+    console.error('Error checking notifications:', error);
+  }
+}
+
+// IndexedDB 관련 함수들
+function openNotificationDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('NotificationDB', 1);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('notifications')) {
+        const store = db.createObjectStore('notifications', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('showAt', 'showAt', { unique: false });
+      }
+    };
+  });
+}
+
+function getScheduledNotifications(db) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['notifications'], 'readonly');
+    const store = transaction.objectStore('notifications');
+    const request = store.getAll();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+function deleteNotification(db, id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['notifications'], 'readwrite');
+    const store = transaction.objectStore('notifications');
+    const request = store.delete(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+// 1분마다 알림 체크
+setInterval(checkAndSendNotifications, 60000);

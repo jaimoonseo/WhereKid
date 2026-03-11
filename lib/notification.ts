@@ -62,29 +62,82 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 }
 
 /**
- * Schedule a local notification (without push server)
- * This uses setTimeout to schedule notifications
+ * Schedule a notification via Service Worker (works in background)
  */
-export function scheduleLocalNotification(
+export async function scheduleLocalNotification(
   title: string,
   body: string,
   delayMs: number
-): number {
-  const timeoutId = window.setTimeout(() => {
-    if (Notification.permission === 'granted') {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification(title, {
-          body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: 'schedule-notification',
-          requireInteraction: false,
-        });
-      });
-    }
-  }, delayMs);
+): Promise<number> {
+  if (Notification.permission !== 'granted') {
+    return -1;
+  }
 
-  return timeoutId;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const showAt = Date.now() + delayMs;
+
+    // Service Worker로 메시지 전송
+    registration.active?.postMessage({
+      type: 'SCHEDULE_NOTIFICATION',
+      title,
+      body,
+      showAt,
+    });
+
+    // IndexedDB에 저장
+    await saveNotificationToDB({
+      title,
+      body,
+      showAt,
+    });
+
+    // fallback으로 setTimeout도 사용 (탭이 열려있을 때를 위해)
+    const timeoutId = window.setTimeout(async () => {
+      const reg = await navigator.serviceWorker.ready;
+      reg.showNotification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'schedule-notification',
+        requireInteraction: false,
+      });
+    }, delayMs);
+
+    return timeoutId;
+  } catch (error) {
+    console.error('Failed to schedule notification:', error);
+    return -1;
+  }
+}
+
+/**
+ * Save notification to IndexedDB
+ */
+async function saveNotificationToDB(notification: { title: string; body: string; showAt: number }): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('NotificationDB', 1);
+
+    request.onerror = () => reject(request.error);
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(['notifications'], 'readwrite');
+      const store = transaction.objectStore('notifications');
+      const addRequest = store.add(notification);
+
+      addRequest.onerror = () => reject(addRequest.error);
+      addRequest.onsuccess = () => resolve();
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains('notifications')) {
+        const store = db.createObjectStore('notifications', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('showAt', 'showAt', { unique: false });
+      }
+    };
+  });
 }
 
 /**
@@ -113,4 +166,23 @@ export function calculateNotificationDelay(scheduleTime: string): number {
   }
 
   return delay;
+}
+
+/**
+ * Initialize notification system (call once on app load)
+ */
+export async function initializeNotificationSystem(): Promise<void> {
+  if (!isPushNotificationSupported()) {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    // Service Worker에게 알림 체크 시작 요청
+    registration.active?.postMessage({
+      type: 'CHECK_SCHEDULED_NOTIFICATIONS',
+    });
+  } catch (error) {
+    console.error('Failed to initialize notification system:', error);
+  }
 }
