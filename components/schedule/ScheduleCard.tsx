@@ -27,7 +27,8 @@ export default function ScheduleCard({
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-white mb-1">
+          <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+            {isActive && <span className="text-2xl">😊</span>}
             {academy}
           </h3>
           {title && title !== academy && (
