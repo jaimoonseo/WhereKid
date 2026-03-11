@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import ScheduleCard from '@/components/schedule/ScheduleCard';
 import PaymentCard from '@/components/payment/PaymentCard';
-import { getCurrentTime } from '@/lib/utils';
+import { getCurrentTime, getDayName } from '@/lib/utils';
 
 interface Schedule {
   id: number;
   startTime: string;
   endTime: string;
+  dayOfWeek?: number;
   academy: {
     id: number;
     name: string;
@@ -102,7 +103,14 @@ export default function Home() {
             )}
             {!currentSchedule && nextSchedule && (
               <div>
-                <h2 className="text-lg font-semibold text-white mb-3">⏰ 다음 스케줄</h2>
+                <h2 className="text-lg font-semibold text-white mb-3">
+                  ⏰ 다음 스케줄
+                  {nextSchedule.dayOfWeek && (
+                    <span className="text-sm font-normal text-gray-400 ml-2">
+                      ({getDayName(nextSchedule.dayOfWeek)})
+                    </span>
+                  )}
+                </h2>
                 <ScheduleCard
                   title={nextSchedule.academy.name}
                   academy={nextSchedule.academy.name}

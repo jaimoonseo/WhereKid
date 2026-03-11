@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentDayOfWeek, getCurrentTime, getCurrentSchedule, getNextSchedule } from '@/lib/utils';
+import {
+  getCurrentDayOfWeek,
+  getCurrentTime,
+  getCurrentSchedule,
+  getNextScheduleAcrossDays,
+  groupSchedulesByDay
+} from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,20 +16,38 @@ export async function GET() {
   try {
     const currentDay = getCurrentDayOfWeek();
 
-    // If weekend, return empty
+    // If weekend, get next week's first schedule
     if (currentDay === 0) {
+      const allSchedules = await prisma.schedule.findMany({
+        include: {
+          academy: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+            },
+          },
+        },
+        orderBy: {
+          startTime: 'asc',
+        },
+      });
+
+      const grouped = groupSchedulesByDay(allSchedules);
+      // Find Monday's first schedule
+      const mondaySchedules = grouped[1] || [];
+      const nextSchedule = mondaySchedules.length > 0 ? { ...mondaySchedules[0], dayOfWeek: 1 } : null;
+
       return NextResponse.json({
         schedules: [],
         currentSchedule: null,
-        nextSchedule: null,
+        nextSchedule,
         isWeekend: true,
       });
     }
 
-    const schedules = await prisma.schedule.findMany({
-      where: {
-        dayOfWeek: currentDay,
-      },
+    // Get all schedules for the week
+    const allSchedules = await prisma.schedule.findMany({
       include: {
         academy: {
           select: {
@@ -38,12 +62,15 @@ export async function GET() {
       },
     });
 
+    const grouped = groupSchedulesByDay(allSchedules);
+    const todaySchedules = grouped[currentDay] || [];
+
     const currentTime = getCurrentTime();
-    const currentSchedule = getCurrentSchedule(schedules, currentTime);
-    const nextSchedule = getNextSchedule(schedules, currentTime);
+    const currentSchedule = getCurrentSchedule(todaySchedules, currentTime);
+    const nextSchedule = getNextScheduleAcrossDays(grouped, currentDay, currentTime);
 
     return NextResponse.json({
-      schedules,
+      schedules: todaySchedules,
       currentSchedule,
       nextSchedule,
       currentTime,

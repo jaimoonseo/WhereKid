@@ -82,7 +82,7 @@ export function getCurrentSchedule(
 }
 
 /**
- * Find next schedule
+ * Find next schedule from today's schedules
  * @param schedules - Array of schedules for today
  * @param currentTime - Current time in "HH:MM" format
  */
@@ -92,6 +92,39 @@ export function getNextSchedule(
 ): (Schedule & { academy: { name: string } }) | null {
   const upcoming = schedules.filter(s => s.startTime > currentTime);
   return upcoming.length > 0 ? upcoming[0] : null;
+}
+
+/**
+ * Find next schedule including future days (used when no more schedules today)
+ * @param allSchedules - All schedules grouped by day
+ * @param currentDay - Current day of week (1-5)
+ * @param currentTime - Current time in "HH:MM" format
+ */
+export function getNextScheduleAcrossDays(
+  allSchedules: Record<number, (Schedule & { academy: { name: string; id: number } })[]>,
+  currentDay: number,
+  currentTime: string
+): ((Schedule & { academy: { name: string; id: number } }) & { dayOfWeek: number }) | null {
+  // First check if there's any remaining schedule today
+  const todaySchedules = allSchedules[currentDay] || [];
+  const todayNext = todaySchedules.find(s => s.startTime > currentTime);
+  if (todayNext) {
+    return { ...todayNext, dayOfWeek: currentDay };
+  }
+
+  // Check future days (starting from tomorrow)
+  for (let i = 1; i <= 5; i++) {
+    const nextDay = ((currentDay - 1 + i) % 5) + 1; // Cycle through 1-5
+    if (nextDay === currentDay) continue; // Skip current day
+
+    const daySchedules = allSchedules[nextDay] || [];
+    if (daySchedules.length > 0) {
+      // Return first schedule of that day
+      return { ...daySchedules[0], dayOfWeek: nextDay };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -130,9 +163,9 @@ export function getUpcomingPayments(
  * Group schedules by day of week
  */
 export function groupSchedulesByDay(
-  schedules: (Schedule & { academy: { name: string } })[]
-): Record<number, (Schedule & { academy: { name: string } })[]> {
-  const grouped: Record<number, (Schedule & { academy: { name: string } })[]> = {
+  schedules: (Schedule & { academy: { name: string; id: number } })[]
+): Record<number, (Schedule & { academy: { name: string; id: number } })[]> {
+  const grouped: Record<number, (Schedule & { academy: { name: string; id: number } })[]> = {
     1: [],
     2: [],
     3: [],
