@@ -101,38 +101,63 @@ export default function Home() {
                 />
               </div>
             )}
-            {!currentSchedule && nextSchedule && (
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3">
-                  ⏰ 다음 스케줄
-                  {nextSchedule.dayOfWeek && (
-                    <span className="text-sm font-normal text-gray-400 ml-2">
-                      ({getDayName(nextSchedule.dayOfWeek)})
-                    </span>
+            {!currentSchedule && nextSchedule && (() => {
+              const koreaTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+              const currentDayOfWeek = koreaTime.getDay();
+              const isNextScheduleTomorrow = nextSchedule.dayOfWeek && nextSchedule.dayOfWeek !== currentDayOfWeek;
+              const lastSchedule = todaySchedules.length > 0 ? todaySchedules[todaySchedules.length - 1] : null;
+
+              return (
+                <>
+                  {isNextScheduleTomorrow && lastSchedule && (
+                    <div>
+                      <h2 className="text-lg font-semibold text-white mb-3">📌 오늘 마지막 스케줄</h2>
+                      <ScheduleCard
+                        title={lastSchedule.academy.name}
+                        academy={lastSchedule.academy.name}
+                        startTime={lastSchedule.startTime}
+                        endTime={lastSchedule.endTime}
+                        isPast
+                      />
+                    </div>
                   )}
-                </h2>
-                <ScheduleCard
-                  title={nextSchedule.academy.name}
-                  academy={nextSchedule.academy.name}
-                  startTime={nextSchedule.startTime}
-                  endTime={nextSchedule.endTime}
-                />
-              </div>
-            )}
+                  <div className={isNextScheduleTomorrow && lastSchedule ? 'mt-6' : ''}>
+                    <h2 className="text-lg font-semibold text-white mb-3">
+                      ⏰ 다음 스케줄
+                      {isNextScheduleTomorrow && nextSchedule.dayOfWeek && (
+                        <span className="text-sm font-normal text-gray-400 ml-2">
+                          ({getDayName(nextSchedule.dayOfWeek)})
+                        </span>
+                      )}
+                    </h2>
+                    <ScheduleCard
+                      title={nextSchedule.academy.name}
+                      academy={nextSchedule.academy.name}
+                      startTime={nextSchedule.startTime}
+                      endTime={nextSchedule.endTime}
+                    />
+                  </div>
+                </>
+              );
+            })()}
             {todaySchedules.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3">📋 오늘의 스케줄</h2>
                 <div className="space-y-2">
-                  {todaySchedules.map((s) => (
-                    <ScheduleCard
-                      key={s.id}
-                      title={s.academy.name}
-                      academy={s.academy.name}
-                      startTime={s.startTime}
-                      endTime={s.endTime}
-                      isActive={currentSchedule?.id === s.id}
-                    />
-                  ))}
+                  {todaySchedules.map((s) => {
+                    const isPast = !!(currentTime && s.endTime < currentTime);
+                    return (
+                      <ScheduleCard
+                        key={s.id}
+                        title={s.academy.name}
+                        academy={s.academy.name}
+                        startTime={s.startTime}
+                        endTime={s.endTime}
+                        isActive={currentSchedule?.id === s.id}
+                        isPast={isPast}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
