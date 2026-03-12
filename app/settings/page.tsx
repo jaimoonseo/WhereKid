@@ -126,6 +126,76 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTestShare = async () => {
+    const shareText = '우리 아이가 지금 영어학원(16:10-17:37)에 있어요 📚';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          text: shareText,
+        });
+      } catch {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('📋 클립보드에 복사되었습니다!\n\n' + shareText);
+      } catch {
+        console.error('Failed to copy');
+      }
+    }
+  };
+
+  const checkScheduledNotifications = async () => {
+    try {
+      const db = await openNotificationDB();
+      const notifications = await getScheduledNotifications(db) as Array<{ title: string; showAt: number }>;
+
+      if (notifications.length === 0) {
+        alert('📭 예약된 알림이 없습니다.');
+      } else {
+        const now = Date.now();
+        const notificationList = notifications.map((n) => {
+          const timeUntil = Math.round((n.showAt - now) / 1000 / 60);
+          const status = timeUntil <= 0 ? '발송 대기' : `${timeUntil}분 후`;
+          return `• ${n.title} - ${status}`;
+        }).join('\n');
+
+        alert(`📬 예약된 알림 (${notifications.length}개)\n\n${notificationList}`);
+      }
+    } catch (error) {
+      alert('❌ 알림 확인 실패\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+    }
+  };
+
+  // IndexedDB helper functions
+  const openNotificationDB = () => {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('NotificationDB', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains('notifications')) {
+          const store = db.createObjectStore('notifications', { keyPath: 'id', autoIncrement: true });
+          store.createIndex('showAt', 'showAt', { unique: false });
+        }
+      };
+    });
+  };
+
+  const getScheduledNotifications = (db: IDBDatabase) => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['notifications'], 'readonly');
+      const store = transaction.objectStore('notifications');
+      const request = store.getAll();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -200,12 +270,26 @@ export default function SettingsPage() {
                     </ul>
                   </div>
 
-                  <button
-                    onClick={handleTestNotification}
-                    className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
-                  >
-                    🧪 테스트 알림 보내기 (1분 후)
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleTestNotification}
+                      className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      🧪 테스트 알림 보내기 (1분 후)
+                    </button>
+                    <button
+                      onClick={checkScheduledNotifications}
+                      className="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      📬 예약된 알림 확인
+                    </button>
+                    <button
+                      onClick={handleTestShare}
+                      className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      📤 공유 기능 테스트
+                    </button>
+                  </div>
                 </>
               )}
 
