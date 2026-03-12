@@ -29,7 +29,7 @@ export default function ScheduleCard({
         await navigator.share({
           text: shareText,
         });
-      } catch (error) {
+      } catch {
         // User cancelled or error occurred
         console.log('Share cancelled');
       }
@@ -38,8 +38,8 @@ export default function ScheduleCard({
       try {
         await navigator.clipboard.writeText(shareText);
         alert('📋 클립보드에 복사되었습니다!');
-      } catch (error) {
-        console.error('Failed to copy:', error);
+      } catch {
+        console.error('Failed to copy');
       }
     }
   };
