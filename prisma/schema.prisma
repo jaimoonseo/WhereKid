@@ -17,6 +17,18 @@ model Child {
   createdAt DateTime  @default(now())
 
   academies Academy[]
+  contacts  Contact[]
+}
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  childId     Int
+  name        String   // e.g., "엄마", "아빠", "할머니"
+  phoneNumber String   // e.g., "010-1234-5678"
+  isDefault   Boolean  @default(false) // 기본 수신자
+  createdAt   DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 }
 
 model Academy {

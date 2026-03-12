@@ -7,6 +7,7 @@ import {
   requestNotificationPermission,
   registerServiceWorker,
 } from '@/lib/notification';
+import { formatPhoneNumber } from '@/lib/sms';
 
 interface DbTestResult {
   success: boolean;
@@ -29,6 +30,15 @@ interface DbTestResult {
   };
 }
 
+interface Contact {
+  id: number;
+  childId: number;
+  name: string;
+  phoneNumber: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
 export default function SettingsPage() {
   const [databaseUrl, setDatabaseUrl] = useState('');
   const [showDbModal, setShowDbModal] = useState(false);
@@ -41,6 +51,14 @@ export default function SettingsPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
 
+  // Contact states
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactDefault, setNewContactDefault] = useState(false);
+  const [contactMessage, setContactMessage] = useState('');
+
   useEffect(() => {
     // Check notification support
     const status = getNotificationPermissionStatus();
@@ -52,7 +70,20 @@ export default function SettingsPage() {
     if (status.supported) {
       registerServiceWorker();
     }
+
+    // Load contacts
+    fetchContacts();
   }, []);
+
+  const fetchContacts = async () => {
+    try {
+      const res = await fetch('/api/contact');
+      const data = await res.json();
+      setContacts(data.contacts || []);
+    } catch (error) {
+      console.error('Failed to fetch contacts:', error);
+    }
+  };
 
   const testConnection = async () => {
     setTestingDb(true);
@@ -196,6 +227,115 @@ export default function SettingsPage() {
     });
   };
 
+  const handleAddContact = async () => {
+    if (!newContactName || !newContactPhone) {
+      setContactMessage('❌ 이름과 전화번호를 입력하세요.');
+      setTimeout(() => setContactMessage(''), 3000);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          childId: 1, // Default child ID for MVP
+          name: newContactName,
+          phoneNumber: newContactPhone,
+          isDefault: newContactDefault,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || '연락처 추가 실패');
+      }
+
+      setContactMessage('✅ 연락처가 추가되었습니다.');
+      setNewContactName('');
+      setNewContactPhone('');
+      setNewContactDefault(false);
+      setShowContactModal(false);
+      fetchContacts();
+      setTimeout(() => setContactMessage(''), 3000);
+    } catch (error) {
+      setContactMessage('❌ ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+      setTimeout(() => setContactMessage(''), 3000);
+    }
+  };
+
+  const handleDeleteContact = async (id: number) => {
+    if (!confirm('이 연락처를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('연락처 삭제 실패');
+      }
+
+      setContactMessage('✅ 연락처가 삭제되었습니다.');
+      fetchContacts();
+      setTimeout(() => setContactMessage(''), 3000);
+    } catch (error) {
+      setContactMessage('❌ ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+      setTimeout(() => setContactMessage(''), 3000);
+    }
+  };
+
+  const handleToggleDefault = async (id: number, currentDefault: boolean) => {
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isDefault: !currentDefault,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('기본 연락처 설정 실패');
+      }
+
+      fetchContacts();
+    } catch (error) {
+      setContactMessage('❌ ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+      setTimeout(() => setContactMessage(''), 3000);
+    }
+  };
+
+  const handleTestSMS = async () => {
+    const defaultContact = contacts.find((c) => c.isDefault);
+    if (!defaultContact) {
+      alert('❌ 기본 연락처를 먼저 설정하세요.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: '[WhereKid 테스트] SMS 전송 기능이 정상 작동합니다! 📱',
+          sendToDefault: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ 테스트 메시지 전송 완료!\n\n수신: ${defaultContact.name} (${defaultContact.phoneNumber})\n\n* 현재는 개발 모드로 실제 SMS는 전송되지 않습니다.\n* 실제 SMS 전송을 위해서는 SMS 서비스(SENS, Aligo 등)를 연동하세요.`);
+      } else {
+        alert('❌ 메시지 전송 실패');
+      }
+    } catch (error) {
+      alert('❌ 메시지 전송 실패\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -304,6 +444,94 @@ export default function SettingsPage() {
                   </ol>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* 연락처 관리 */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">📱 SMS 연락처 관리</h3>
+            <button
+              onClick={() => setShowContactModal(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              + 추가
+            </button>
+          </div>
+
+          {contactMessage && (
+            <div className={`mb-4 rounded-lg p-3 text-sm ${
+              contactMessage.startsWith('✅')
+                ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                : 'bg-red-500/10 border border-red-500/30 text-red-400'
+            }`}>
+              {contactMessage}
+            </div>
+          )}
+
+          {contacts.length === 0 ? (
+            <div className="bg-gray-700/50 border border-gray-600/50 rounded-lg p-6 text-center">
+              <p className="text-gray-400 text-sm mb-3">등록된 연락처가 없습니다.</p>
+              <p className="text-xs text-gray-500">
+                연락처를 추가하면 스케줄 정보를<br />
+                자동으로 SMS로 전송할 수 있습니다.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {contacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className="bg-gray-700 border border-gray-600 rounded-lg p-4 flex items-center justify-between"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-medium">{contact.name}</p>
+                      {contact.isDefault && (
+                        <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-semibold rounded">
+                          기본
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-400 mt-1">{contact.phoneNumber}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleToggleDefault(contact.id, contact.isDefault)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        contact.isDefault
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                      }`}
+                      title={contact.isDefault ? '기본 연락처' : '기본으로 설정'}
+                    >
+                      ⭐
+                    </button>
+                    <button
+                      onClick={() => handleDeleteContact(contact.id)}
+                      className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {contacts.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <button
+                onClick={handleTestSMS}
+                className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                📤 테스트 SMS 보내기
+              </button>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                기본 연락처로 테스트 메시지를 전송합니다
+              </p>
             </div>
           )}
         </div>
@@ -516,6 +744,95 @@ export default function SettingsPage() {
               >
                 닫기
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* 연락처 추가 모달 */}
+        {showContactModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">📱 연락처 추가</h3>
+                <button
+                  onClick={() => {
+                    setShowContactModal(false);
+                    setNewContactName('');
+                    setNewContactPhone('');
+                    setNewContactDefault(false);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    이름
+                  </label>
+                  <input
+                    type="text"
+                    value={newContactName}
+                    onChange={(e) => setNewContactName(e.target.value)}
+                    placeholder="예: 엄마, 아빠, 할머니"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    전화번호
+                  </label>
+                  <input
+                    type="tel"
+                    value={newContactPhone}
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      setNewContactPhone(formatted);
+                    }}
+                    placeholder="010-1234-5678"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    자동으로 하이픈이 추가됩니다
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isDefault"
+                    checked={newContactDefault}
+                    onChange={(e) => setNewContactDefault(e.target.checked)}
+                    className="w-4 h-4 rounded"
+                  />
+                  <label htmlFor="isDefault" className="text-sm text-gray-300">
+                    기본 연락처로 설정
+                  </label>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowContactModal(false);
+                      setNewContactName('');
+                      setNewContactPhone('');
+                      setNewContactDefault(false);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleAddContact}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

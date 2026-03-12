@@ -138,6 +138,7 @@ export default function Home() {
                   academy={currentSchedule.academy.name}
                   startTime={currentSchedule.startTime}
                   endTime={currentSchedule.endTime}
+                  scheduleId={currentSchedule.id}
                   isActive
                 />
               </div>
@@ -158,6 +159,7 @@ export default function Home() {
                         academy={lastSchedule.academy.name}
                         startTime={lastSchedule.startTime}
                         endTime={lastSchedule.endTime}
+                        scheduleId={lastSchedule.id}
                         isPast
                       />
                     </div>
@@ -176,6 +178,7 @@ export default function Home() {
                       academy={nextSchedule.academy.name}
                       startTime={nextSchedule.startTime}
                       endTime={nextSchedule.endTime}
+                      scheduleId={nextSchedule.id}
                     />
                   </div>
                 </>
@@ -194,6 +197,7 @@ export default function Home() {
                         academy={s.academy.name}
                         startTime={s.startTime}
                         endTime={s.endTime}
+                        scheduleId={s.id}
                         isActive={currentSchedule?.id === s.id}
                         isPast={isPast}
                       />
