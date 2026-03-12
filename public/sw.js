@@ -80,23 +80,8 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('message', (event) => {
   console.log('Message received:', event.data);
 
-  if (event.data.type === 'SCHEDULE_NOTIFICATION') {
-    const { title, body, showAt } = event.data;
-    const delay = showAt - Date.now();
-
-    if (delay > 0) {
-      // IndexedDB나 localStorage에 저장하고 주기적으로 확인
-      setTimeout(() => {
-        self.registration.showNotification(title, {
-          body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: 'schedule-notification',
-          requireInteraction: false,
-        });
-      }, delay);
-    }
-  }
+  // SCHEDULE_NOTIFICATION 메시지는 IndexedDB 저장만 하고
+  // 실제 알림은 periodic check에서 처리 (중복 방지)
 
   if (event.data.type === 'CHECK_SCHEDULED_NOTIFICATIONS') {
     // 저장된 알림 확인 및 발송
@@ -118,7 +103,7 @@ async function checkAndSendNotifications() {
           body: notification.body,
           icon: '/icon-192.png',
           badge: '/icon-192.png',
-          tag: 'schedule-notification',
+          tag: `schedule-${notification.showAt}`, // 고유 태그로 중복 방지
           requireInteraction: false,
         });
         // 발송한 알림은 DB에서 삭제

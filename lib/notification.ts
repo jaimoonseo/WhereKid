@@ -99,7 +99,7 @@ export async function scheduleLocalNotification(
         body,
         icon: '/icon-192.png',
         badge: '/icon-192.png',
-        tag: 'schedule-notification',
+        tag: `schedule-${showAt}`, // 고유 태그로 중복 방지
         requireInteraction: false,
       });
     }, delayMs);
