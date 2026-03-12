@@ -59,6 +59,10 @@ export default function SettingsPage() {
   const [newContactDefault, setNewContactDefault] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
 
+  // Calendar states
+  const [calendarUrl, setCalendarUrl] = useState('');
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+
   useEffect(() => {
     // Check notification support
     const status = getNotificationPermissionStatus();
@@ -73,6 +77,10 @@ export default function SettingsPage() {
 
     // Load contacts
     fetchContacts();
+
+    // Generate calendar URL
+    const baseUrl = window.location.origin;
+    setCalendarUrl(`${baseUrl}/api/calendar/feed?childId=1`);
   }, []);
 
   const fetchContacts = async () => {
@@ -336,6 +344,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCopyCalendarUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(calendarUrl);
+      alert('✅ 캘린더 URL이 복사되었습니다!\n\n아이폰 설정 > 캘린더 > 계정 추가에서 사용하세요.');
+    } catch (error) {
+      alert('❌ 복사 실패\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+    }
+  };
+
+  const handleDownloadCalendar = () => {
+    window.open(calendarUrl, '_blank');
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -534,6 +555,69 @@ export default function SettingsPage() {
               </p>
             </div>
           )}
+        </div>
+
+        {/* 캘린더 구독 */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">📅 아이폰 캘린더 구독</h3>
+            <button
+              onClick={() => setShowCalendarModal(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              설정 방법
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <p className="text-blue-400 text-sm font-medium mb-2">✨ 기능</p>
+              <ul className="text-xs text-gray-300 space-y-1">
+                <li>• 아이폰/맥 캘린더 앱에서 학원 스케줄 확인</li>
+                <li>• 스케줄 변경 시 자동 동기화 (1시간마다)</li>
+                <li>• 10분 전 자동 알림</li>
+                <li>• 구글 캘린더, 아웃룩 등에서도 사용 가능</li>
+              </ul>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                캘린더 구독 URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={calendarUrl}
+                  readOnly
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  onClick={handleCopyCalendarUrl}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors whitespace-nowrap"
+                >
+                  📋 복사
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                이 URL을 아이폰 캘린더에 추가하세요
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleDownloadCalendar}
+                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                📥 캘린더 파일 다운로드
+              </button>
+              <button
+                onClick={() => setShowCalendarModal(true)}
+                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                📖 설정 가이드
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-6">
@@ -833,6 +917,88 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 캘린더 설정 가이드 모달 */}
+        {showCalendarModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">📅 캘린더 구독 설정</h3>
+                <button
+                  onClick={() => setShowCalendarModal(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-blue-400 text-sm font-medium mb-2">🍎 아이폰 설정 방법</p>
+                  <ol className="text-xs text-gray-300 space-y-2 list-decimal list-inside">
+                    <li>위의 "📋 복사" 버튼으로 URL 복사</li>
+                    <li>설정 앱 열기</li>
+                    <li>캘린더 → 계정 → 계정 추가</li>
+                    <li>"기타" 선택</li>
+                    <li>"캘린더 구독" 선택</li>
+                    <li>복사한 URL 붙여넣기</li>
+                    <li>완료!</li>
+                  </ol>
+                </div>
+
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                  <p className="text-green-400 text-sm font-medium mb-2">💻 맥(Mac) 설정 방법</p>
+                  <ol className="text-xs text-gray-300 space-y-2 list-decimal list-inside">
+                    <li>캘린더 앱 열기</li>
+                    <li>파일 → 새로운 캘린더 구독</li>
+                    <li>URL 붙여넣기</li>
+                    <li>완료!</li>
+                  </ol>
+                </div>
+
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                  <p className="text-purple-400 text-sm font-medium mb-2">🌐 구글 캘린더 설정 방법</p>
+                  <ol className="text-xs text-gray-300 space-y-2 list-decimal list-inside">
+                    <li>구글 캘린더 웹 접속</li>
+                    <li>좌측 "다른 캘린더" 옆 + 버튼</li>
+                    <li>"URL로 추가" 선택</li>
+                    <li>URL 붙여넣기</li>
+                    <li>완료!</li>
+                  </ol>
+                </div>
+
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                  <p className="text-yellow-400 text-sm font-medium mb-2">⚠️ 주의사항</p>
+                  <ul className="text-xs text-gray-300 space-y-1">
+                    <li>• 동기화는 1시간마다 자동으로 진행됩니다</li>
+                    <li>• 구독 캘린더의 일정은 직접 수정할 수 없습니다</li>
+                    <li>• WhereKid 앱에서만 일정을 수정하세요</li>
+                    <li>• URL을 공유하면 다른 사람도 볼 수 있으니 주의하세요</li>
+                  </ul>
+                </div>
+
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <p className="text-sm text-white font-medium mb-2">🎯 포함 정보</p>
+                  <ul className="text-xs text-gray-300 space-y-1">
+                    <li>✅ 학원 이름 (제목)</li>
+                    <li>✅ 시작/종료 시간</li>
+                    <li>✅ 학원 주소 (위치)</li>
+                    <li>✅ 학원 전화번호</li>
+                    <li>✅ 카테고리 및 메모</li>
+                    <li>✅ 10분 전 알림</li>
+                  </ul>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                닫기
+              </button>
             </div>
           </div>
         )}
